@@ -1,0 +1,82 @@
+# SuPCIS-L8 GitLab CI Pipeline
+# Runs on every merge request and every push to main/develop
+
+stages:
+  - build
+  - test
+  - analysis
+  - deploy
+
+variables:
+  CC: gcc
+  CFLAGS: "-Wall -Wextra -std=c99"
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+build:
+  stage: build
+  script:
+    - make clean
+    - make -j$(nproc)
+  artifacts:
+    paths:
+      - build/bin/supcis-l8
+    expire_in: 1 hour
+
+# ── Unit Tests ────────────────────────────────────────────────────────────────
+unit_tests:
+  stage: test
+  script:
+    - scripts/testing/run_unit_tests.sh
+  artifacts:
+    reports:
+      junit: build/reports/test-results/unit-tests.xml
+
+# ── Integration Tests (needs Oracle XE) ──────────────────────────────────────
+integration_tests:
+  stage: test
+  services:
+    - name: gvenzl/oracle-xe:21-slim
+      alias: oracle-db
+  variables:
+    ORACLE_TNS: "oracle-db/XEPDB1"
+    DB_USER: "supcis_test"
+    DB_PASS: "test_pass"
+  script:
+    - scripts/database/migrate.sh test
+    - scripts/testing/run_integration_tests.sh
+  only:
+    - merge_requests
+    - main
+
+# ── Static Analysis ───────────────────────────────────────────────────────────
+cppcheck:
+  stage: analysis
+  script:
+    - cppcheck --enable=all --error-exitcode=1 src/
+  allow_failure: false
+
+valgrind:
+  stage: analysis
+  script:
+    - scripts/testing/valgrind_check.sh
+  allow_failure: true  # memory leaks are warnings, not blockers for now
+
+# ── Deploy to staging ─────────────────────────────────────────────────────────
+deploy_staging:
+  stage: deploy
+  script:
+    - scripts/deployment/deploy.sh staging
+  environment:
+    name: staging
+  only:
+    - develop
+
+deploy_production:
+  stage: deploy
+  script:
+    - scripts/deployment/deploy.sh production
+  environment:
+    name: production
+  when: manual
+  only:
+    - main

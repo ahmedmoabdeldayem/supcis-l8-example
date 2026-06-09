@@ -1,0 +1,21 @@
+# Customer warehouse configuration template
+# Copy this folder, rename to customer name, fill in values
+warehouse_id: "WH001"
+name: "Example Distribution Center GmbH"
+address: "Musterstraße 1, 12345 Berlin, DE"
+
+locations:
+  bin_prefix: "BIN"
+  staging_prefix: "STAGE"
+  port_prefix: "PORT"
+  autostore_port_count: 4
+
+autostore:
+  enabled: true
+  controller_url: "http://192.168.1.100:8080"
+  api_key: "${AUTOSTORE_API_KEY}"
+  heartbeat_interval_sec: 30
+  command_timeout_ms: 5000
+
+picking_strategy: "wave_optimization"   # or "single_order"
+max_lines_per_wave: 100

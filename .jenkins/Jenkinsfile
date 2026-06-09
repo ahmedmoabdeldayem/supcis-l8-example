@@ -1,0 +1,128 @@
+/*
+ * Jenkinsfile — CI/CD pipeline for SuPCIS-L8 using Jenkins
+ *
+ * This is an ALTERNATIVE to .gitlab-ci.yml — some customers run Jenkins
+ * instead of GitLab CI. Both files define the same stages.
+ *
+ * Jenkins "Pipeline as Code": the pipeline is stored in the repo (not in
+ * the Jenkins UI) so changes to the pipeline go through code review.
+ *
+ * HOW JENKINS DIFFERS FROM GITLAB CI:
+ *   - GitLab CI: YAML-based, each job runs in its own Docker container
+ *   - Jenkins:   Groovy-based, jobs run on "agents" (nodes) you configure
+ *
+ * STAGES:
+ *   Checkout → Build → Unit Tests → Integration Tests → Analysis → Deploy
+ */
+pipeline {
+
+    /* "any" means Jenkins picks whichever build agent is available.
+     * In production you'd specify: agent { label 'linux-c-builder' } */
+    agent any
+
+    environment {
+        /* These variables come from Jenkins Credentials (not hardcoded here) */
+        DB_USER         = credentials('oracle-db-user')
+        DB_PASS         = credentials('oracle-db-pass')
+        DEPLOY_SSH_KEY  = credentials('deploy-ssh-key')
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                /* Clone the repository at the triggering commit */
+                checkout scm
+                echo "Building commit: ${env.GIT_COMMIT}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'make clean'
+                sh 'make -j$(nproc)'
+            }
+            post {
+                success {
+                    /* Archive the binary so downstream stages can use it */
+                    archiveArtifacts artifacts: 'build/bin/supcis-l8'
+                }
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh 'scripts/testing/run_unit_tests.sh'
+            }
+            post {
+                always {
+                    /* Publish test results so Jenkins shows pass/fail counts */
+                    junit 'build/reports/test-results/*.xml'
+                }
+            }
+        }
+
+        stage('Integration Tests') {
+            /* Only run integration tests on main and develop branches
+             * (they take longer and require a database) */
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                    changeRequest()  /* also run on any pull request */
+                }
+            }
+            steps {
+                sh 'scripts/testing/run_integration_tests.sh'
+            }
+        }
+
+        stage('Static Analysis') {
+            parallel {
+                stage('cppcheck') {
+                    steps {
+                        sh 'cppcheck --enable=all --error-exitcode=1 src/'
+                    }
+                }
+                stage('Valgrind') {
+                    steps {
+                        sh 'scripts/testing/valgrind_check.sh'
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Staging') {
+            when { branch 'develop' }
+            steps {
+                sh 'scripts/deployment/deploy.sh staging'
+                sh 'scripts/deployment/health_check.sh staging.supcis.internal 8080'
+            }
+        }
+
+        stage('Deploy to Production') {
+            when { branch 'main' }
+            /* Manual approval required before production deploy */
+            input {
+                message "Deploy to production?"
+                ok "Yes, deploy"
+                submitter "lead-developer,release-manager"
+            }
+            steps {
+                sh 'scripts/deployment/deploy.sh production'
+                sh 'scripts/deployment/health_check.sh prod.supcis.internal 8080'
+            }
+        }
+    }
+
+    post {
+        failure {
+            /* Notify the team on Slack when a build breaks */
+            echo "Build failed — notify team (Slack/email in real setup)"
+        }
+        always {
+            /* Clean up workspace to free disk space on the agent */
+            cleanWs()
+        }
+    }
+}

@@ -1,0 +1,19 @@
+# ERP integration mappings — SAP IDoc / RFC configuration
+sap:
+  enabled: false
+  host: "sap.customer.com"
+  client: "100"
+  user: "${SAP_RFC_USER}"
+  password: "${SAP_RFC_PASS}"
+
+  warehouse_mapping:
+    WH001: "1000"
+
+  order_type_mapping:
+    STANDARD: "ZPO"
+    URGENT:   "ZPU"
+
+  stock_type_mapping:
+    on_hand:  "01"
+    reserved: "02"
+    blocked:  "03"
