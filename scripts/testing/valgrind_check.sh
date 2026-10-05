@@ -11,10 +11,13 @@ cd "$PROJECT_ROOT"
 scripts/testing/run_unit_tests.sh
 
 echo "[valgrind] Running memory checks..."
+# --leak-check=full    report all leaks with full stack traces
+# --track-origins=yes  show where uninitialised values came from
+# --error-exitcode=1   fail if any error is detected
 valgrind \
-    --leak-check=full \       # report all memory leaks with full stack traces
-    --error-exitcode=1 \      # fail the script if any error is found
-    --track-origins=yes \     # show where uninitialised values came from
+    --leak-check=full \
+    --error-exitcode=1 \
+    --track-origins=yes \
     ./build/bin/test_inventory
 
 echo "[valgrind] No memory issues detected."

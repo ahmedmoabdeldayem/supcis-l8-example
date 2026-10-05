@@ -1,5 +1,4 @@
 # SuPCIS-L8 GitLab CI Pipeline
-# Runs on every merge request and every push to main/develop
 
 stages:
   - build
@@ -44,9 +43,9 @@ integration_tests:
   script:
     - scripts/database/migrate.sh test
     - scripts/testing/run_integration_tests.sh
-  only:
-    - merge_requests
-    - main
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
 
 # ── Static Analysis ───────────────────────────────────────────────────────────
 cppcheck:
@@ -59,7 +58,7 @@ valgrind:
   stage: analysis
   script:
     - scripts/testing/valgrind_check.sh
-  allow_failure: true  # memory leaks are warnings, not blockers for now
+  allow_failure: false
 
 # ── Deploy to staging ─────────────────────────────────────────────────────────
 deploy_staging:
@@ -68,8 +67,8 @@ deploy_staging:
     - scripts/deployment/deploy.sh staging
   environment:
     name: staging
-  only:
-    - develop
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
 
 deploy_production:
   stage: deploy
@@ -78,5 +77,5 @@ deploy_production:
   environment:
     name: production
   when: manual
-  only:
-    - main
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
