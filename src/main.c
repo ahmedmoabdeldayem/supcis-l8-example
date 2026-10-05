@@ -1,3 +1,6 @@
+/* Required for struct timespec and nanosleep under -std=c99 */
+#define _POSIX_C_SOURCE 200809L
+
 /*
  * SuPCIS-L8 — Main entry point
  *
