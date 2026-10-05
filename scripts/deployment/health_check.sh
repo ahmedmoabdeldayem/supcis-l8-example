@@ -3,7 +3,7 @@
 # Usage: scripts/deployment/health_check.sh <host> <api_key>
 
 HOST=${1:-localhost:8080}
-API_KEY=${2:-replace-me}
+API_KEY=${2:-<replace-me>}
 
 echo "[health] Checking $HOST..."
 

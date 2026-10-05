@@ -799,8 +799,8 @@ autostore:
 **`config/environments/development.env`** — loaded by developers locally:
 ```bash
 export DB_TNS=localhost/XEPDB1
-export DB_USER=supcis_dev
-export DB_PASS=replace-me
+export DB_USER=<replace-me>
+export DB_PASS=<replace-me>
 export LOG_LEVEL=DEBUG
 ```
 
