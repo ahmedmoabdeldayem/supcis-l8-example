@@ -64,7 +64,7 @@ supcis_result_t db_connect(
     strncpy(handle->tns, tns_alias, sizeof(handle->tns) - 1);
     handle->connected = 1;
 
-    LOG_INFO("db", "Connected to Oracle: %s@%s", username, tns_alias);
+    LOG_INFO("db", "Connected to Oracle TNS:%s", tns_alias);
     *out_handle = handle;
     return SUPCIS_OK;
 }

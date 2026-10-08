@@ -29,6 +29,18 @@
 #include <string.h>
 #include <stdio.h>
 
+/* Escapes `"` and `\` in src so it is safe to embed in a JSON string literal. */
+static void json_escape(const char *src, char *dst, size_t dst_size) {
+    size_t di = 0;
+    for (size_t i = 0; src[i] && di + 2 < dst_size; i++) {
+        if (src[i] == '"' || src[i] == '\\') {
+            dst[di++] = '\\';
+        }
+        dst[di++] = src[i];
+    }
+    dst[di] = '\0';
+}
+
 /*
  * handle_get_inventory — handles GET /api/v1/inventory?sku=XXX&location=YYY
  *
@@ -106,6 +118,10 @@ supcis_result_t handle_get_inventory(
 
     /* ── Success: serialize the stock_item_t to JSON ─────────────────────── */
     res->status_code = 200;
+    char sku_safe[64]      = {0};
+    char location_safe[48] = {0};
+    json_escape(item.sku_id,        sku_safe,      sizeof(sku_safe));
+    json_escape(item.location_code, location_safe, sizeof(location_safe));
     snprintf(res->body, sizeof(res->body),
         "{"
           "\"sku\":\"%s\","
@@ -114,8 +130,8 @@ supcis_result_t handle_get_inventory(
           "\"reserved\":%d,"       /* units locked for open pick tasks */
           "\"available\":%d"       /* on_hand - reserved = can be picked */
         "}",
-        item.sku_id,
-        item.location_code,
+        sku_safe,
+        location_safe,
         item.quantity_on_hand,
         item.quantity_reserved,
         stock_item_available(&item));

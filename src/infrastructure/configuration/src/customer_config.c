@@ -32,6 +32,11 @@ static supcis_result_t substitute_env_var(const char *template, char *out, size_
         const char *end = strchr(template, '}');
         if (!end) return SUPCIS_ERR_INVALID_ARG;
         size_t name_len = (size_t)(end - template - 2);
+        if (name_len >= sizeof(var_name)) {
+            LOG_ERROR("config", "Environment variable name too long (max %zu chars)",
+                      sizeof(var_name) - 1);
+            return SUPCIS_ERR_INVALID_ARG;
+        }
         strncpy(var_name, template + 2, name_len);
 
         const char *value = getenv(var_name);

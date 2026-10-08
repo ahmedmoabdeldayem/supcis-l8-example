@@ -120,7 +120,13 @@ supcis_result_t picking_service_create_wave(
          * In production this is inside a database transaction.
          */
         rc = repo->save(repo, &stock);
-        if (rc != SUPCIS_OK) return rc;
+        if (rc != SUPCIS_OK) {
+            LOG_ERROR("picking_service",
+                      "Failed to persist reservation for SKU %s — "
+                      "%d reservation(s) already saved. Caller must rollback.",
+                      line->sku_id, out_wave->task_count);
+            return rc;
+        }
 
         /* ── Step 4: build the pick task ─────────────────────────────────── */
         pick_task_t *task = &out_wave->tasks[out_wave->task_count++];
