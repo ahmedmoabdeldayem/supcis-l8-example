@@ -54,7 +54,10 @@ supcis_result_t app_create_order(
      *   order.status     = ORDER_STATUS_NEW;
      *   order.created_at = time(NULL);
      *   order.line_count = line_count;
-     *   memcpy(order.lines, lines, line_count * sizeof(order_line_t));
+     *   /* Cast to size_t before multiplying to prevent 32-bit overflow when
+     *    * line_count is large; destination buffer is order.lines[ORDER_MAX_LINES]
+     *    * so the line_count <= ORDER_MAX_LINES guard above ensures it fits. */
+     *   memcpy(order.lines, lines, (size_t)line_count * sizeof(order_line_t));
      *
      * Step 4: Persist in Oracle
      *   INSERT INTO order_header (order_id, customer_ref, status, created_at)
@@ -224,6 +227,9 @@ supcis_result_t app_release_order(
  */
 supcis_result_t app_confirm_pick_task(const char *task_id, quantity_t qty_picked)
 {
+    if (!task_id)        return SUPCIS_ERR_INVALID_ARG;
+    if (qty_picked <= 0) return SUPCIS_ERR_INVALID_ARG;
+
     LOG_INFO("app", "Confirming task %s, qty=%d", task_id, qty_picked);
 
     /*

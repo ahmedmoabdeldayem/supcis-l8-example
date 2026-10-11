@@ -23,6 +23,18 @@
 #include <stdio.h>
 #include <stdint.h>
 
+/* Escapes `"` and `\` in src so it is safe to embed in a JSON string literal. */
+static void json_escape(const char *src, char *dst, size_t dst_size) {
+    size_t di = 0;
+    for (size_t i = 0; src[i] && di + 2 < dst_size; i++) {
+        if (src[i] == '"' || src[i] == '\\') {
+            dst[di++] = '\\';
+        }
+        dst[di++] = src[i];
+    }
+    dst[di] = '\0';
+}
+
 /* -------------------------------------------------------------------------
  * Path-matching helpers
  * -------------------------------------------------------------------------*/
@@ -219,8 +231,12 @@ supcis_result_t rest_handler_dispatch(
     /* ---- No route matched --------------------------------------------- */
 
     res->status_code = 404;
+    /* Escape req->path before interpolating into JSON to prevent injection
+     * from attacker-controlled path strings containing `"` or `\`. */
+    char safe_path[512] = {0};
+    json_escape(req->path, safe_path, sizeof(safe_path));
     snprintf(res->body, sizeof(res->body),
-             "{\"error\":\"not_found\",\"path\":\"%s\"}", req->path);
+             "{\"error\":\"not_found\",\"path\":\"%s\"}", safe_path);
     LOG_WARN("api", "No route for %s %s", req->method == HTTP_GET ? "GET" : "POST",
              req->path);
     return SUPCIS_OK;

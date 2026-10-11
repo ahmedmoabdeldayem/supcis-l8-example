@@ -18,6 +18,15 @@
 #include <string.h>
 #include <stdio.h>
 
+/*
+ * starts_with -- returns 1 if str begins with prefix, 0 otherwise.
+ * Used to guard pointer arithmetic before advancing past the prefix.
+ */
+static int starts_with(const char *str, const char *prefix)
+{
+    return strncmp(str, prefix, strlen(prefix)) == 0;
+}
+
 /* -------------------------------------------------------------------------
  * handle_create_order
  *   POST /api/v1/orders
@@ -123,6 +132,11 @@ supcis_result_t handle_get_order(
     /* Extract the order ID from the URL path: /api/v1/orders/<id> */
     char order_id[64] = {0};
     const char *prefix = "/api/v1/orders/";
+    if (!starts_with(req->path, prefix)) {
+        res->status_code = 400;
+        snprintf(res->body, sizeof(res->body), "{\"error\":\"invalid\"}");
+        return SUPCIS_OK;
+    }
     const char *id_start = req->path + strlen(prefix);
     /* ID ends at '?' (query string) or end of string */
     size_t id_len = strcspn(id_start, "?");
@@ -177,7 +191,13 @@ supcis_result_t handle_release_order(
 {
     /* Extract order ID from path: /api/v1/orders/<id>/release */
     char order_id[64] = {0};
-    const char *id_start = req->path + strlen("/api/v1/orders/");
+    const char *release_prefix = "/api/v1/orders/";
+    if (!starts_with(req->path, release_prefix)) {
+        res->status_code = 400;
+        snprintf(res->body, sizeof(res->body), "{\"error\":\"invalid\"}");
+        return SUPCIS_OK;
+    }
+    const char *id_start = req->path + strlen(release_prefix);
     size_t id_len = strcspn(id_start, "/");
     if (id_len == 0 || id_len >= sizeof(order_id)) {
         res->status_code = 400;
@@ -253,7 +273,13 @@ supcis_result_t handle_cancel_order(
 {
     /* Extract order ID from path: /api/v1/orders/<id>/cancel */
     char order_id[64] = {0};
-    const char *id_start = req->path + strlen("/api/v1/orders/");
+    const char *cancel_prefix = "/api/v1/orders/";
+    if (!starts_with(req->path, cancel_prefix)) {
+        res->status_code = 400;
+        snprintf(res->body, sizeof(res->body), "{\"error\":\"invalid\"}");
+        return SUPCIS_OK;
+    }
+    const char *id_start = req->path + strlen(cancel_prefix);
     size_t id_len = strcspn(id_start, "/");
     if (id_len == 0 || id_len >= sizeof(order_id)) {
         res->status_code = 400;

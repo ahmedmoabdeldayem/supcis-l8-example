@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 
     /* Step 7: graceful shutdown */
     LOG_INFO("main", "Shutdown signal received — closing resources");
-    db_disconnect(db);
+    if (db) db_disconnect(db);
     logger_close();
 
     return EXIT_SUCCESS;
