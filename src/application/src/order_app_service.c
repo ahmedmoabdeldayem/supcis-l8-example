@@ -54,9 +54,9 @@ supcis_result_t app_create_order(
      *   order.status     = ORDER_STATUS_NEW;
      *   order.created_at = time(NULL);
      *   order.line_count = line_count;
-     *   /* Cast to size_t before multiplying to prevent 32-bit overflow when
-     *    * line_count is large; destination buffer is order.lines[ORDER_MAX_LINES]
-     *    * so the line_count <= ORDER_MAX_LINES guard above ensures it fits. */
+     *   Cast to size_t before multiplying to prevent 32-bit overflow when
+     *   line_count is large; the line_count <= ORDER_MAX_LINES guard above
+     *   ensures the destination buffer order.lines[ORDER_MAX_LINES] is large enough.
      *   memcpy(order.lines, lines, (size_t)line_count * sizeof(order_line_t));
      *
      * Step 4: Persist in Oracle
